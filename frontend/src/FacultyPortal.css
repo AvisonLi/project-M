@@ -1,0 +1,363 @@
+.faculty-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.faculty-title {
+  color: #333;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+.faculty-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  min-height: 600px;
+}
+
+.course-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 80px;
+}
+
+.course-panel h2 {
+  color: #333;
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+}
+
+.courses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.course-btn {
+  background: #f9f9f9;
+  border: 2px solid #eee;
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.course-btn:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.course-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+.course-btn-code {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.course-btn-title {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
+.course-btn-count {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  opacity: 0.7;
+}
+
+.no-courses {
+  color: #999;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.content-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.course-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #eee;
+}
+
+.course-header h2 {
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.course-description {
+  color: #666;
+  margin: 0 0 1rem 0;
+  font-size: 1.05rem;
+}
+
+.course-stats {
+  display: flex;
+  gap: 1.5rem;
+  color: #666;
+}
+
+.course-stats span {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.course-stats strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 2rem;
+}
+
+.grade-form-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.grade-form-section h3 {
+  color: #333;
+  margin: 0 0 1.5rem 0;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  background: white;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input[type='number'] {
+  background: #e8e8e8;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.student-list-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.student-list-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.student-item {
+  background: white;
+  border: 1px solid #eee;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  transition: box-shadow 0.3s ease;
+}
+
+.student-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.student-item.selected {
+  border-color: #007bff;
+  background: #f8f9ff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+.student-item.selected .student-name {
+  color: #007bff;
+}
+
+.student-info {
+  margin: 0;
+}
+
+.student-name {
+  margin: 0 0 0.25rem 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.student-email {
+  margin: 0 0 0.25rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.student-grade {
+  margin: 0 0 0.25rem 0;
+  color: #28a745;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.enrolled-date {
+  margin: 0;
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.no-students {
+  color: #999;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.loading {
+  text-align: center;
+  color: #666;
+  padding: 1rem;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #999;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.alert-error {
+  background: #fee;
+  color: #c33;
+  border: 1px solid #f99;
+}
+
+.alert-success {
+  background: #efe;
+  color: #3c3;
+  border: 1px solid #9f9;
+}
+
+@media (max-width: 1024px) {
+  .faculty-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .course-panel {
+    position: relative;
+    top: auto;
+    max-width: 100%;
+  }
+
+  .two-column-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .faculty-container {
+    padding: 1rem;
+  }
+
+  .course-panel {
+    max-height: 300px;
+  }
+
+  .content-panel {
+    padding: 1rem;
+  }
+
+  .course-header h2 {
+    font-size: 1.3rem;
+  }
+}
