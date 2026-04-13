@@ -1,98 +1,74 @@
 # Student Management System (SMS)
 
-A comprehensive student management system built with Node.js, Express, PostgreSQL, and React. The system supports course registration with concurrent request handling, grade management, student profiles, and an administrative dashboard.
+A comprehensive student management system built with Node.js, Express, PostgreSQL, and React. The system supports course registration, grade management, student profiles, attendance tracking, and admin/faculty dashboards.
 
-## 🌟 Features
+## 🌟 What this README covers
 
-### Core Functionality
-- **User Authentication**: Secure login and registration with JWT and bcrypt
-- **Role-Based Access Control**: Three user roles (student, faculty, admin) with distinct permissions
-- **Course Management**: Create, update, delete courses (admin only)
-- **User Management**: Full CRUD operations for user accounts (admin only)
-- **Teacher Course Assignment**: Assign courses to faculty members (admin only)
-- **Course Registration**: Concurrent-safe course registration for students using Redis distributed locks
-- **Grade Management**: Record and retrieve student grades with GPA calculations
-- **Student Profiles**: View and update student information and statistics
-- **Faculty Dashboard**: Faculty Portal for managing assigned courses and recording grades
-- **Admin Dashboard**: Comprehensive admin interface for system management and reporting
-
-### Security & Performance
-- JWT-based authentication with 24-hour token expiration
-- Role-based authorization for all protected endpoints
-- Redis-based distributed locking for concurrent request handling
-- PostgreSQL connection pooling with parameterized queries
-- Input validation and error handling
-- CORS protection
-- Password hashing with bcrypt
-- Prepared statements to prevent SQL injection
+This guide explains how to open the project step by step, install dependencies, configure the database, run the backend and frontend, and access the application in your browser.
 
 ## 📋 Prerequisites
 
-- **Node.js** 14+ and npm
-- **PostgreSQL** 12+ database
-- **Redis** server running
-- **Python** 3.7+ (for load testing)
+Before opening the project, make sure you have the following installed:
 
-## 📂 Project Structure
+- **Node.js** 14 or newer
+- **npm** (included with Node.js)
+- **PostgreSQL** 12 or newer
+- **Redis** server running locally
+- **Python** 3.7 or newer (optional, for seed script)
+- A code editor such as **Visual Studio Code**
 
-```
-sms-project/
-├── schema.sql                  # Database schema
-├── server.js                   # Main server entry point
-├── package.json                # Node.js dependencies
-├── .env.example               # Environment variables template
-├── routes/
-│   ├── auth.js                # Authentication endpoints
-│   ├── registration.js        # Course registration endpoints
-│   ├── grades.js              # Grade management endpoints
-│   ├── profile.js             # Student profile endpoints
-│   └── admin.js               # Admin endpoints
-├── frontend/
-│   ├── Login.jsx              # Login/Registration component
-│   ├── Navbar.jsx             # Navigation component
-│   ├── StudentPortal.jsx      # Student interface
-│   ├── FacultyPortal.jsx      # Faculty interface
-│   ├── AdminPortal.jsx        # Admin interface
-│   └── *.css                  # Component styles
-├── load_test.py               # Concurrent load testing script
-└── README.md                  # This file
-```
+## 🔧 Step 1: Open the project in VS Code
 
-## 🚀 Installation & Setup
+1. Open Visual Studio Code.
+2. Select **File > Open Folder...**.
+3. Navigate to `c:\Users\aviso\Documents\GitHub\project-M`.
+4. Click **Select Folder**.
+5. The project root should now appear in the Explorer panel.
 
-### 1. Clone and Install Dependencies
+> Tip: If you already have VS Code open, use **File > Open Folder...** and choose the same path.
+
+## 📥 Step 2: Install backend dependencies
+
+1. Open a terminal in VS Code by selecting **Terminal > New Terminal**.
+2. Make sure the terminal is in the project root: `c:\Users\aviso\Documents\GitHub\project-M`.
+3. Run:
 
 ```bash
-cd sms-project
 npm install
 ```
 
-### 2. Database Setup
+This installs the backend dependencies defined in `package.json`.
 
-Create a PostgreSQL database:
+## 🗄️ Step 3: Set up the PostgreSQL database
+
+1. Start PostgreSQL if it is not already running.
+2. Create the database:
 
 ```bash
 createdb sms_db
 ```
 
-Initialize the schema:
+3. Run the schema file to create tables:
 
 ```bash
 psql -U postgres -d sms_db -f schema.sql
 ```
 
-### 3. Environment Configuration
+If your PostgreSQL user is named differently, replace `postgres` with your user name.
 
-Copy `.env.example` to `.env` and configure:
+## 🔑 Step 4: Configure environment variables
+
+1. In the project root, copy `.env.example` to `.env`.
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
-Edit `.env` with your settings:
+2. Open `.env` in VS Code.
+3. Update the values to match your local setup, for example:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/sms_db
+DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/sms_db
 PORT=3001
 NODE_ENV=development
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
@@ -101,164 +77,154 @@ CORS_ORIGIN=http://localhost:3000
 LOG_LEVEL=debug
 ```
 
-### 4. Seed Sample Data
+## 🌱 Step 5: Seed sample data (optional but recommended)
 
-The project includes an automated seeding script to populate initial test data:
+To populate sample users, courses, and enrollment data, run the seed script.
+
+1. In one terminal, start the backend server (see Step 6 below).
+2. In another terminal, run:
 
 ```bash
-# Install Python requests library
-pip install requests
-
-# Start the backend (in another terminal)
-npm run dev
-
-# Run the seeding script
 python seed_data.py
 ```
 
-This creates sample users (admin, faculty, students), courses, and teacher assignments.
+If Python is not installed, you can skip this step and create test data manually.
 
-**Test Credentials after seeding:**
-- Admin: `admin@example.com` / `admin123`
-- Faculty: `dr.smith@example.com` / `faculty123`
-- Student: `alice@example.com` / `student123`
+## 🚀 Step 6: Run the backend server
 
-## 🏃 Running the Application
-
-### Start Backend Server
+In the project root terminal, start the backend:
 
 ```bash
-# Development mode with auto-reload
 npm run dev
-
-# Production mode
-npm start
 ```
 
-The server will be available at `http://localhost:3001`
+This runs the server with auto-reload. The backend listens at:
 
-### Start Frontend (React)
+```text
+http://localhost:3001
+```
+
+## 🌐 Step 7: Run the frontend app
+
+1. Open a second terminal in VS Code.
+2. Change into the frontend directory:
 
 ```bash
 cd frontend
+```
+
+3. Install frontend dependencies:
+
+```bash
 npm install
+```
+
+4. Start the React app:
+
+```bash
 npm start
 ```
 
-The frontend will run on `http://localhost:3000` and proxy API calls to `http://localhost:3001`
+The frontend will open at:
 
-## 📡 API Endpoints
-
-### Authentication (`/api/auth`)
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| POST | `/login` | User login | No |
-| POST | `/register` | New user registration | No |
-| POST | `/verify` | Verify JWT token | Yes |
-
-**Login Request:**
-```json
-{
-  "email": "student@example.com",
-  "password": "student123"
-}
+```text
+http://localhost:3000
 ```
 
-**Login Response:**
-```json
-{
-  "message": "Login successful",
-  "token": "eyJhbGc...",
-  "student": {
-    "id": 1,
-    "name": "John Doe",
-    "email": "student@example.com"
-  }
-}
+The React app should proxy API requests to the backend running on port `3001`.
+
+## 🧭 Step 8: Open the app in your browser
+
+1. After starting both servers, open your browser.
+2. Go to:
+
+```text
+http://localhost:3000
 ```
 
-### Course Registration (`/api/register`)
+3. Use seeded credentials or create a new account to log in.
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| POST | `/` | Register for a course | Yes |
-| GET | `/my-courses` | Get enrolled courses | Yes |
-| GET | `/courses/available` | List available courses | No |
-| DELETE | `/:courseId` | Withdraw from course | Yes |
+## ✅ How to use the app
 
-**Register for Course:**
-```json
-{
-  "courseId": 2
-}
+### Student portal
+- View profile and statistics
+- Register for courses
+- View grades
+- View attendance
+
+### Faculty portal
+- Manage assigned courses
+- Create attendance sessions
+- Record grades
+
+### Admin portal
+- Manage courses and users
+- Assign teachers
+- View system reports
+
+## 📁 Project structure overview
+
+```
+project-M/
+├── schema.sql
+├── seed_data.py
+├── server.js
+├── package.json
+├── .env.example
+├── routes/
+│   ├── admin.js
+│   ├── assessments.js
+│   ├── attendance.js
+│   ├── auth.js
+│   ├── grades.js
+│   ├── profile.js
+│   ├── registration.js
+│   ├── student.js
+│   └── sso.js
+├── middleware/
+│   └── auth.js
+├── frontend/
+│   ├── package.json
+│   ├── public/
+│   └── src/
+│       ├── App.js
+│       ├── Login.jsx
+│       ├── StudentPortal.jsx
+│       ├── FacultyPortal.jsx
+│       ├── AdminPortal.jsx
+│       └── *.css
+└── README.md
 ```
 
-### Grades (`/api/grades`)
+## 📌 Quick commands summary
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| POST | `/add` | Record a grade | Yes |
-| GET | `/my-grades` | Get student's grades | Yes |
-| GET | `/student/:studentId` | Get specific student's grades | Yes |
-| GET | `/course/:courseId` | Get course grades | No |
-| PUT | `/:gradeId` | Update grade | Yes |
-| DELETE | `/:gradeId` | Delete grade | Yes |
+```bash
+# Open project folder in VS Code
+code .
 
-**Record Grade:**
-```json
-{
-  "studentId": 1,
-  "courseId": 2,
-  "grade": "A",
-  "gpa": 4.0
-}
+# Install backend dependencies
+npm install
+
+# Start backend server
+npm run dev
+
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Start frontend
+npm start
 ```
 
-### Student Profile (`/api/profile`)
+## 📝 Notes
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| GET | `/me` | Get own profile | Yes |
-| GET | `/:studentId` | Get student profile | No |
-| PUT | `/me/update` | Update own profile | Yes |
-| PUT | `/:studentId/admin-update` | Update student (admin) | No |
-| POST | `/me/change-password` | Change password | Yes |
-| GET | `/me/statistics` | Get profile statistics | Yes |
+- If the frontend does not open automatically, manually visit `http://localhost:3000`.
+- If the backend fails, check `DATABASE_URL`, `PORT`, and Redis connectivity.
+- The seed script is optional but recommended for quick testing.
 
-### Admin (`/api/admin`)
+---
 
-**Course Management:**
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| POST | `/courses` | Create course (admin only) | Yes |
-| GET | `/courses` | List all courses | No |
-| GET | `/courses/:courseId` | Get course details | No |
-| PUT | `/courses/:courseId` | Update course (admin only) | Yes |
-| DELETE | `/courses/:courseId` | Delete course (admin only) | Yes |
-
-**Student Management:**
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| GET | `/students` | List all students (admin only) | Yes |
-| GET | `/students/:studentId/details` | Get student details (admin only) | Yes |
-| POST | `/users` | Create new user (admin only) | Yes |
-| GET | `/users` | List all users (admin only) | Yes |
-| GET | `/users/:userId` | Get user details (admin only) | Yes |
-| PUT | `/users/:userId` | Update user profile (admin only) | Yes |
-| DELETE | `/users/:userId` | Delete user (admin only) | Yes |
-
-**Teacher Course Assignment:**
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| POST | `/teacher-courses` | Assign course to teacher (admin only) | Yes |
-| GET | `/teacher-courses/:teacherId` | Get teacher's assigned courses | No |
-| DELETE | `/teacher-courses/:teacherId/:courseId` | Remove course from teacher (admin only) | Yes |
-
-**Reports & Statistics:**
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---|
-| GET | `/statistics/dashboard` | Dashboard statistics | No |
+If you want, I can also add a short section with the most important test user logins and how to switch between student/faculty/admin views.| GET | `/statistics/dashboard` | Dashboard statistics | No |
 | GET | `/reports/course-enrollment` | Enrollment report | No |
 
 ## 🌱 Database Seeding
