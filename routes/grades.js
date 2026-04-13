@@ -99,6 +99,54 @@ module.exports = (pool) => {
     }
   });
 
+  // PATCH /api/assessments/grades/:courseId/toggle-posting
+router.patch('/grades/:courseId/toggle-posting', verifyToken, async (req, res) => {
+  // Only faculty or admin can do this
+  if (req.userRole !== 'faculty' && req.userRole !== 'admin') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { courseId } = req.params;
+  const { isPosted } = req.body; // boolean
+
+  if (typeof isPosted !== 'boolean') {
+    return res.status(400).json({ error: 'isPosted must be a boolean' });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    // Optional: verify that the faculty teaches this course (if not admin)
+    if (req.userRole === 'faculty') {
+      const teachCheck = await client.query(
+        'SELECT 1 FROM teacher_courses WHERE teacher_id = $1 AND course_id = $2',
+        [req.userId, courseId]
+      );
+      if (teachCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'You are not assigned to this course' });
+      }
+    }
+
+    // Update all grades for this course
+    const result = await client.query(
+      `UPDATE grades SET is_posted = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE course_id = $2
+       RETURNING student_id, grade`,
+      [isPosted, courseId]
+    );
+
+    client.release();
+    res.json({
+      message: `Grades ${isPosted ? 'posted' : 'hidden'} successfully`,
+      updatedCount: result.rowCount
+    });
+  } catch (err) {
+    console.error('Error toggling grade posting:', err);
+    res.status(500).json({ error: 'Failed to toggle grade posting' });
+  }
+});
+
   // Get grades for the logged-in student
   router.get('/my-grades', verifyToken, async (req, res) => {
     const studentId = req.userId;

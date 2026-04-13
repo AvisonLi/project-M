@@ -104,7 +104,13 @@ function Login() {
         confirmPassword: '',
       });
     } catch (err) {
-      const errorMessage = err.response?.data?.error || 'An error occurred. Please try again.';
+      const errorMessage =
+        err.response?.status === 431
+          ? 'Request header fields too large. Clear browser cookies and retry.'
+          : err.response?.data?.error ||
+            err.response?.statusText ||
+            err.message ||
+            'An error occurred. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -203,7 +209,7 @@ function Login() {
         <div className="demo-credentials">
           <p className="demo-title">Demo Credentials:</p>
           <p>Email: student@example.com</p>
-          <p>Password: password123</p>
+          <p>Password: student123</p>
         </div>
       </div>
     </div>

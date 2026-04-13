@@ -299,6 +299,344 @@
   padding: 1rem;
 }
 
+/* Course Tabs */
+.course-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+}
+
+.course-tabs button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: #f9f9f9;
+  color: #666;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.tab-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: 2px solid #667eea;
+}
+
+.tab-inactive:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+/* Attendance Section */
+.attendance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.attendance-form-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.attendance-form-section h3 {
+  color: #333;
+  margin: 0 0 1.5rem 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: normal;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.attendance-sessions-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.attendance-sessions-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.session-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.session-info p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.attendance-records-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.attendance-records-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.records-table {
+  overflow-x: auto;
+}
+
+.records-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.records-table th,
+.records-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.records-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Assessments Section */
+.assessments-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.assessment-form-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.assessment-form-section h3 {
+  color: #333;
+  margin: 0 0 1.5rem 0;
+}
+
+.assessments-list-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.assessments-list-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.assessments-table {
+  overflow-x: auto;
+}
+
+.assessments-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.assessments-table th,
+.assessments-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.assessments-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.grade-entry-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.grade-entry-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.grade-entry-table {
+  overflow-x: auto;
+}
+
+.grade-entry-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.grade-entry-table th,
+.grade-entry-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  font-size: 0.85rem;
+}
+
+.grade-entry-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  position: sticky;
+  top: 0;
+}
+
+.grade-entry-table input {
+  width: 100%;
+  padding: 0.25rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.grade-entry-table input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.grade-statistics-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.grade-statistics-section h3 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.assessment-stats {
+  margin-bottom: 1.5rem;
+}
+
+.assessment-stats h4 {
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.stats-grid div {
+  text-align: center;
+  font-weight: 500;
+  color: #555;
+}
+
+.grade-posting-controls {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.grade-posting-controls h4 {
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background 0.3s ease;
+}
+
+.btn-success:hover {
+  background: #218838;
+}
+
+.btn-warning {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.btn-warning:hover {
+  background: #e0a800;
+}
+
+.empty-state {
+  text-align: center;
+  color: #666;
+  padding: 3rem 0;
+  font-size: 1.1rem;
+}
+
 .empty-state {
   display: flex;
   align-items: center;

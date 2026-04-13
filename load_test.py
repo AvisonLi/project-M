@@ -16,7 +16,7 @@ BASE_URL = 'http://localhost:3000/api'
 NUM_CONCURRENT_REQUESTS = 100
 NUM_ITERATIONS = 5
 LOGIN_EMAIL = 'student@example.com'
-LOGIN_PASSWORD = 'password123'
+LOGIN_PASSWORD = 'student123'
 
 # Global statistics
 results = defaultdict(int)

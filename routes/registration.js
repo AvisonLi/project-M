@@ -1,120 +1,341 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../middleware/auth');
 
 module.exports = (pool, redis) => {
   const router = express.Router();
 
-  // Middleware for JWT verification
-  const verifyToken = async (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token provided' });
+// Get available courses for registration
+router.get('/available', verifyToken, async (req, res) => {
+  if (req.userRole !== 'student') {
+    return res.status(403).json({ error: 'Only students can view available courses' });
+  }
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.userId = decoded.id;
+  let client;
+  try {
+    client = await pool.connect();
 
-      // Fetch user role
-      let client = await pool.connect();
-      const user = await client.query('SELECT role FROM students WHERE id = $1', [req.userId]);
-      client.release();
+    // Check if registration is currently open
+    const registrationPeriod = await client.query(
+      'SELECT * FROM registration_periods WHERE is_active = true LIMIT 1'
+    );
 
-      if (user.rows.length === 0) {
-        return res.status(401).json({ error: 'User not found' });
-      }
-
-      req.userRole = user.rows[0].role || 'student';
-      next();
-    } catch (err) {
-      res.status(401).json({ error: 'Invalid or expired token' });
-    }
-  };
-
-  // Register for a course
-  router.post('/', verifyToken, async (req, res) => {
-    const { courseId } = req.body;
-    const studentId = req.userId;
-
-    if (!courseId) {
-      return res.status(400).json({ error: 'Course ID is required' });
+    if (registrationPeriod.rows.length === 0) {
+      return res.json({
+        available: false,
+        message: 'Course registration is currently closed',
+        courses: []
+      });
     }
 
-    const lockKey = `course:${courseId}:lock`;
-    const lockValue = `student:${studentId}:${Date.now()}`;
-    const lockDuration = 5; // 5 seconds
+    // Get courses with enrollment status
+    const courses = await client.query(
+      `SELECT c.*,
+              CASE WHEN e.id IS NOT NULL THEN true ELSE false END as is_enrolled,
+              CASE WHEN w.id IS NOT NULL THEN w.position ELSE null END as waitlist_position,
+              (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id AND status = 'enrolled') as enrolled_count,
+              (SELECT COUNT(*) FROM waitlist WHERE course_id = c.id) as waitlist_count
+       FROM courses c
+       LEFT JOIN enrollments e ON c.id = e.course_id AND e.student_id = $1 AND e.status = 'enrolled'
+       LEFT JOIN waitlist w ON c.id = w.course_id AND w.student_id = $1
+       WHERE c.is_active = true
+       ORDER BY c.code ASC`,
+      [req.userId]
+    );
 
-    let client;
-    try {
-      // Acquire distributed lock
-      const lockAcquired = await redis.set(lockKey, lockValue, 'NX', 'EX', lockDuration);
+    res.json({
+      available: true,
+      registrationPeriod: registrationPeriod.rows[0],
+      courses: courses.rows
+    });
+  } catch (err) {
+    console.error('Error fetching available courses:', err);
+    res.status(500).json({ error: 'Server error fetching courses' });
+  } finally {
+    if (client) client.release();
+  }
+});
 
-      if (!lockAcquired) {
-        return res.status(429).json({
-          error: 'Too many concurrent registration requests for this course. Please try again later.',
-        });
-      }
+// Register for a course
+router.post('/enroll/:courseId', verifyToken, async (req, res) => {
+  if (req.userRole !== 'student') {
+    return res.status(403).json({ error: 'Only students can register for courses' });
+  }
 
-      client = await pool.connect();
+  const { courseId } = req.params;
 
-      // Check if student is already enrolled
-      const existingEnrollment = await client.query(
-        'SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2',
-        [studentId, courseId]
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Check if registration is open
+    const registrationPeriod = await client.query(
+      'SELECT * FROM registration_periods WHERE is_active = true AND start_date <= CURRENT_TIMESTAMP AND end_date >= CURRENT_TIMESTAMP LIMIT 1'
+    );
+
+    if (registrationPeriod.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Course registration is not currently open' });
+    }
+
+    // Check if already enrolled or on waitlist
+    const existingEnrollment = await client.query(
+      'SELECT id, status FROM enrollments WHERE student_id = $1 AND course_id = $2',
+      [req.userId, courseId]
+    );
+
+    if (existingEnrollment.rows.length > 0) {
+      await client.query('ROLLBACK');
+      const status = existingEnrollment.rows[0].status;
+      return res.status(400).json({
+        error: `You are already ${status === 'enrolled' ? 'enrolled' : 'on the waitlist'} for this course`
+      });
+    }
+
+    // Get course info
+    const course = await client.query(
+      'SELECT * FROM courses WHERE id = $1 AND is_active = true',
+      [courseId]
+    );
+
+    if (course.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const courseData = course.rows[0];
+
+    // Check current enrollment count
+    const enrollmentCount = await client.query(
+      'SELECT COUNT(*) as count FROM enrollments WHERE course_id = $1 AND status = $2',
+      [courseId, 'enrolled']
+    );
+
+    if (enrollmentCount.rows[0].count < courseData.capacity) {
+      // Direct enrollment
+      await client.query(
+        'INSERT INTO enrollments (student_id, course_id, status) VALUES ($1, $2, $3)',
+        [req.userId, courseId, 'enrolled']
       );
 
-      if (existingEnrollment.rows.length > 0) {
-        await redis.del(lockKey);
-        return res.status(409).json({ error: 'Student is already enrolled in this course' });
-      }
-
-      // Get course capacity
-      const courseResult = await client.query('SELECT id, capacity, title FROM courses WHERE id = $1', [courseId]);
-
-      if (courseResult.rows.length === 0) {
-        await redis.del(lockKey);
-        return res.status(404).json({ error: 'Course not found' });
-      }
-
-      const course = courseResult.rows[0];
-
-      // Count current enrollments
-      const enrollmentCountResult = await client.query(
-        'SELECT COUNT(*) as count FROM enrollments WHERE course_id = $1',
+      // Update course enrollment count
+      await client.query(
+        'UPDATE courses SET current_enrollments = current_enrollments + 1 WHERE id = $1',
         [courseId]
       );
 
-      const currentEnrollments = parseInt(enrollmentCountResult.rows[0].count, 10);
-
-      if (currentEnrollments >= course.capacity) {
-        await redis.del(lockKey);
-        return res.status(400).json({
-          error: 'Course is full',
-          course: { id: course.id, title: course.title, capacity: course.capacity },
-        });
-      }
-
-      // Insert enrollment
-      const result = await client.query(
-        'INSERT INTO enrollments (student_id, course_id) VALUES ($1, $2) RETURNING id, created_at',
-        [studentId, courseId]
+      await client.query('COMMIT');
+      res.json({ message: 'Successfully enrolled in course' });
+    } else {
+      // Add to waitlist
+      const waitlistPosition = await client.query(
+        'SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM waitlist WHERE course_id = $1',
+        [courseId]
       );
 
-      res.status(201).json({
-        message: 'Course registration successful',
-        enrollment: {
-          id: result.rows[0].id,
-          courseId,
-          studentId,
-          enrolledAt: result.rows[0].created_at,
-        },
+      await client.query(
+        'INSERT INTO waitlist (student_id, course_id, position) VALUES ($1, $2, $3)',
+        [req.userId, courseId, waitlistPosition.rows[0].next_position]
+      );
+
+      await client.query('COMMIT');
+      res.json({
+        message: 'Added to waitlist',
+        position: waitlistPosition.rows[0].next_position
       });
-    } catch (err) {
-      console.error('Registration error:', err);
-      res.status(500).json({ error: 'Server error during registration' });
-    } finally {
-      if (client) client.release();
-      await redis.del(lockKey).catch(() => {});
     }
-  });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error enrolling in course:', err);
+    res.status(500).json({ error: 'Server error during enrollment' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Drop a course
+router.post('/drop/:courseId', verifyToken, async (req, res) => {
+  if (req.userRole !== 'student') {
+    return res.status(403).json({ error: 'Only students can drop courses' });
+  }
+
+  const { courseId } = req.params;
+
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Check if registration is open
+    const registrationPeriod = await client.query(
+      'SELECT * FROM registration_periods WHERE is_active = true AND add_drop_deadline >= CURRENT_TIMESTAMP LIMIT 1'
+    );
+
+    if (registrationPeriod.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Add/drop period has ended' });
+    }
+
+    // Check if enrolled
+    const enrollment = await client.query(
+      'SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2 AND status = $3',
+      [req.userId, courseId, 'enrolled']
+    );
+
+    if (enrollment.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'You are not enrolled in this course' });
+    }
+
+    // Mark as dropped
+    await client.query(
+      'UPDATE enrollments SET status = $1, dropped_at = CURRENT_TIMESTAMP WHERE student_id = $2 AND course_id = $3',
+      ['dropped', req.userId, courseId]
+    );
+
+    // Update course enrollment count
+    await client.query(
+      'UPDATE courses SET current_enrollments = current_enrollments - 1 WHERE id = $1',
+      [courseId]
+    );
+
+    // Process waitlist - move first person to enrolled
+    const waitlist = await client.query(
+      'SELECT * FROM waitlist WHERE course_id = $1 ORDER BY position ASC LIMIT 1',
+      [courseId]
+    );
+
+    if (waitlist.rows.length > 0) {
+      const nextStudent = waitlist.rows[0];
+
+      // Move to enrolled
+      await client.query(
+        'INSERT INTO enrollments (student_id, course_id, status) VALUES ($1, $2, $3)',
+        [nextStudent.student_id, courseId, 'enrolled']
+      );
+
+      // Remove from waitlist
+      await client.query('DELETE FROM waitlist WHERE id = $1', [nextStudent.id]);
+
+      // Update remaining waitlist positions
+      await client.query(
+        'UPDATE waitlist SET position = position - 1 WHERE course_id = $1 AND position > $2',
+        [courseId, nextStudent.position]
+      );
+
+      // Update course count
+      await client.query(
+        'UPDATE courses SET current_enrollments = current_enrollments + 1 WHERE id = $1',
+        [courseId]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Successfully dropped course' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error dropping course:', err);
+    res.status(500).json({ error: 'Server error during course drop' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Get student's current enrollments
+router.get('/my-courses', verifyToken, async (req, res) => {
+  if (req.userRole !== 'student') {
+    return res.status(403).json({ error: 'Only students can view their enrollments' });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    const enrollments = await client.query(
+      `SELECT e.*, c.code, c.title, c.credits, c.semester, c.year
+       FROM enrollments e
+       JOIN courses c ON e.course_id = c.id
+       WHERE e.student_id = $1 AND e.status = 'enrolled'
+       ORDER BY c.code ASC`,
+      [req.userId]
+    );
+
+    res.json({ enrollments: enrollments.rows });
+  } catch (err) {
+    console.error('Error fetching enrollments:', err);
+    res.status(500).json({ error: 'Server error fetching enrollments' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Get registration periods (admin only)
+router.get('/periods', verifyToken, async (req, res) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ error: 'Only admins can view registration periods' });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    const periods = await client.query(
+      'SELECT * FROM registration_periods ORDER BY year DESC, semester DESC'
+    );
+
+    res.json({ periods: periods.rows });
+  } catch (err) {
+    console.error('Error fetching registration periods:', err);
+    res.status(500).json({ error: 'Server error fetching registration periods' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Create/update registration period (admin only)
+router.post('/periods', verifyToken, async (req, res) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ error: 'Only admins can manage registration periods' });
+  }
+
+  const { semester, year, startDate, endDate, addDropDeadline, isActive } = req.body;
+
+  if (!semester || !year || !startDate || !endDate) {
+    return res.status(400).json({ error: 'Required fields: semester, year, startDate, endDate' });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+
+    // If setting as active, deactivate others
+    if (isActive) {
+      await client.query('UPDATE registration_periods SET is_active = false WHERE is_active = true');
+    }
+
+    const result = await client.query(
+      `INSERT INTO registration_periods (semester, year, start_date, end_date, add_drop_deadline, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (semester, year) DO UPDATE SET
+         start_date = EXCLUDED.start_date,
+         end_date = EXCLUDED.end_date,
+         add_drop_deadline = EXCLUDED.add_drop_deadline,
+         is_active = EXCLUDED.is_active
+       RETURNING *`,
+      [semester, year, startDate, endDate, addDropDeadline, isActive || false]
+    );
+
+    res.json({
+      message: 'Registration period saved successfully',
+      period: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Error saving registration period:', err);
+    res.status(500).json({ error: 'Server error saving registration period' });
+  } finally {
+    if (client) client.release();
+  }
+});
 
   // Get student's enrolled courses (students only)
   router.get('/my-courses', verifyToken, async (req, res) => {

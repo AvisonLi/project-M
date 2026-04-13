@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 const Redis = require('ioredis');
 const cors = require('cors');
+const http = require('http');
 require('dotenv').config();
 
 const app = express();
@@ -34,9 +35,14 @@ redis.on('error', (err) => {
 // Routes
 app.use('/api/auth', require('./routes/auth')(pool));
 app.use('/api/register', require('./routes/registration')(pool, redis));
+app.use('/api/registration', require('./routes/registration')(pool, redis));
 app.use('/api/grades', require('./routes/grades')(pool));
 app.use('/api/profile', require('./routes/profile')(pool));
 app.use('/api/admin', require('./routes/admin')(pool));
+app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/assessments', require('./routes/assessments'));
+app.use('/api/student', require('./routes/student'));
+app.use('/api/sso', require('./routes/sso'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -59,7 +65,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = http.createServer({ maxHeaderSize: 65536 }, app);
+server.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log(`📚 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);

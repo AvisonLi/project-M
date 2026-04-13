@@ -161,7 +161,7 @@ The frontend will run on `http://localhost:3000` and proxy API calls to `http://
 ```json
 {
   "email": "student@example.com",
-  "password": "password123"
+  "password": "student123"
 }
 ```
 
@@ -353,7 +353,7 @@ Edit `load_test.py` to adjust:
 NUM_CONCURRENT_REQUESTS = 100  # Concurrent requests per iteration
 NUM_ITERATIONS = 5              # Number of test iterations
 LOGIN_EMAIL = 'student@example.com'
-LOGIN_PASSWORD = 'password123'
+LOGIN_PASSWORD = 'student123'
 ```
 
 ### Expected Results

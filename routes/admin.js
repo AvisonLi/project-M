@@ -124,7 +124,7 @@ module.exports = (pool) => {
       }
 
       const enrollmentResult = await client.query(
-        `SELECT s.id, s.student_id, s.name, s.email, e.created_at as enrolled_at
+        `SELECT s.id, s.student_id, s.name, s.email, e.enrolled_at as enrolled_at
          FROM enrollments e
          INNER JOIN students s ON e.student_id = s.id
          WHERE e.course_id = $1
@@ -310,15 +310,14 @@ module.exports = (pool) => {
         return res.status(404).json({ error: 'Student not found' });
       }
 
-      // Get enrollments
-      const enrollmentsResult = await client.query(
-        `SELECT c.id, c.code, c.title, e.created_at as enrolled_at
-         FROM enrollments e
-         INNER JOIN courses c ON e.course_id = c.id
-         WHERE e.student_id = $1
-         ORDER BY e.created_at DESC`,
-        [studentId]
-      );
+const enrollmentsResult = await client.query(
+  `SELECT c.id, c.code, c.title, e.enrolled_at as enrolled_at
+   FROM enrollments e
+   INNER JOIN courses c ON e.course_id = c.id
+   WHERE e.student_id = $1
+   ORDER BY e.enrolled_at DESC`,
+  [studentId]
+);
 
       // Get grades
       const gradesResult = await client.query(
@@ -350,6 +349,99 @@ module.exports = (pool) => {
     } catch (err) {
       console.error('Error fetching student details:', err);
       res.status(500).json({ error: 'Server error fetching student details' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Enroll student in course
+  router.post('/students/:studentId/enroll/:courseId', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can enroll students' });
+    }
+
+    const { studentId, courseId } = req.params;
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      // Check if student exists
+      const studentCheck = await client.query('SELECT id FROM students WHERE id = $1', [studentId]);
+      if (studentCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+
+      // Check if course exists
+      const courseCheck = await client.query('SELECT id, capacity FROM courses WHERE id = $1', [courseId]);
+      if (courseCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Course not found' });
+      }
+
+      // Check if already enrolled
+      const existingEnrollment = await client.query(
+        'SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2',
+        [studentId, courseId]
+      );
+      if (existingEnrollment.rows.length > 0) {
+        return res.status(409).json({ error: 'Student is already enrolled in this course' });
+      }
+
+      // Check capacity
+      const currentEnrollments = await client.query(
+        'SELECT COUNT(*) as count FROM enrollments WHERE course_id = $1',
+        [courseId]
+      );
+      if (parseInt(currentEnrollments.rows[0].count, 10) >= courseCheck.rows[0].capacity) {
+        return res.status(409).json({ error: 'Course is at full capacity' });
+      }
+
+      // Enroll student
+      await client.query(
+        'INSERT INTO enrollments (student_id, course_id) VALUES ($1, $2)',
+        [studentId, courseId]
+      );
+
+      res.json({ message: 'Student enrolled successfully' });
+    } catch (err) {
+      console.error('Error enrolling student:', err);
+      res.status(500).json({ error: 'Server error enrolling student' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Unenroll student from course
+  router.delete('/students/:studentId/enroll/:courseId', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can unenroll students' });
+    }
+
+    const { studentId, courseId } = req.params;
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      // Check if enrollment exists
+      const enrollmentCheck = await client.query(
+        'SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2',
+        [studentId, courseId]
+      );
+      if (enrollmentCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Student is not enrolled in this course' });
+      }
+
+      // Unenroll student
+      await client.query(
+        'DELETE FROM enrollments WHERE student_id = $1 AND course_id = $2',
+        [studentId, courseId]
+      );
+
+      res.json({ message: 'Student unenrolled successfully' });
+    } catch (err) {
+      console.error('Error unenrolling student:', err);
+      res.status(500).json({ error: 'Server error unenrolling student' });
     } finally {
       if (client) client.release();
     }
@@ -509,9 +601,10 @@ module.exports = (pool) => {
     }
 
     const { userId } = req.params;
-    const { name, email, role } = req.body;
+    const { name, email, role, password } = req.body;
+    const bcrypt = require('bcrypt');
 
-    if (!name && !email && !role) {
+    if (!name && !email && !role && !password) {
       return res.status(400).json({ error: 'At least one field is required' });
     }
 
@@ -519,14 +612,23 @@ module.exports = (pool) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
+    if (password && password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
     let client;
     try {
       client = await pool.connect();
 
       // Check if user exists
-      const user = await client.query('SELECT id FROM students WHERE id = $1', [userId]);
+      const user = await client.query('SELECT id, role FROM students WHERE id = $1', [userId]);
       if (user.rows.length === 0) {
         return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Prevent changing admin passwords
+      if (password && user.rows[0].role === 'admin') {
+        return res.status(403).json({ error: 'Cannot change password for admin users' });
       }
 
       // Check if email is already in use
@@ -554,6 +656,12 @@ module.exports = (pool) => {
       if (role) {
         updates.push(`role = $${params.length + 1}`);
         params.push(role);
+      }
+
+      if (password) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        updates.push(`password_hash = $${params.length + 1}`);
+        params.push(hashedPassword);
       }
 
       updates.push(`updated_at = CURRENT_TIMESTAMP`);
@@ -769,6 +877,168 @@ module.exports = (pool) => {
     } catch (err) {
       console.error('Error removing course from teacher:', err);
       res.status(500).json({ error: 'Server error removing course' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // ========== REGISTRATION PERIOD MANAGEMENT ==========
+
+  // Get registration periods
+  router.get('/registration-periods', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can view registration periods' });
+    }
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      const result = await client.query(
+        'SELECT * FROM registration_periods ORDER BY year DESC, semester DESC',
+        []
+      );
+
+      res.json({ periods: result.rows });
+    } catch (err) {
+      console.error('Error fetching registration periods:', err);
+      res.status(500).json({ error: 'Server error fetching registration periods' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Create registration period
+  router.post('/registration-periods', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can create registration periods' });
+    }
+
+    const { semester, year, start_date, end_date, add_drop_deadline, is_active } = req.body;
+
+    if (!semester || !year || !start_date || !end_date) {
+      return res.status(400).json({ error: 'semester, year, start_date, and end_date are required' });
+    }
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      // If setting this as active, deactivate others
+      if (is_active) {
+        await client.query('UPDATE registration_periods SET is_active = false WHERE is_active = true', []);
+      }
+
+      const result = await client.query(
+        `INSERT INTO registration_periods (semester, year, start_date, end_date, add_drop_deadline, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [semester, year, start_date, end_date, add_drop_deadline || null, is_active || false]
+      );
+
+      res.json({ period: result.rows[0] });
+    } catch (err) {
+      console.error('Error creating registration period:', err);
+      res.status(500).json({ error: 'Server error creating registration period' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Update registration period
+  router.put('/registration-periods/:periodId', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can update registration periods' });
+    }
+
+    const { periodId } = req.params;
+    const { semester, year, start_date, end_date, add_drop_deadline, is_active } = req.body;
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      // If setting this as active, deactivate others
+      if (is_active) {
+        await client.query('UPDATE registration_periods SET is_active = false WHERE is_active = true AND id != $1', [periodId]);
+      }
+
+      const params = [];
+      const updates = [];
+      let paramCount = 1;
+
+      if (semester) {
+        updates.push(`semester = $${paramCount++}`);
+        params.push(semester);
+      }
+      if (year) {
+        updates.push(`year = $${paramCount++}`);
+        params.push(year);
+      }
+      if (start_date) {
+        updates.push(`start_date = $${paramCount++}`);
+        params.push(start_date);
+      }
+      if (end_date) {
+        updates.push(`end_date = $${paramCount++}`);
+        params.push(end_date);
+      }
+      if (add_drop_deadline) {
+        updates.push(`add_drop_deadline = $${paramCount++}`);
+        params.push(add_drop_deadline);
+      }
+      if (is_active !== undefined) {
+        updates.push(`is_active = $${paramCount++}`);
+        params.push(is_active);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      params.push(periodId);
+      const query = `UPDATE registration_periods SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+
+      const result = await client.query(query, params);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Registration period not found' });
+      }
+
+      res.json({ period: result.rows[0] });
+    } catch (err) {
+      console.error('Error updating registration period:', err);
+      res.status(500).json({ error: 'Server error updating registration period' });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Delete registration period
+  router.delete('/registration-periods/:periodId', verifyToken, async (req, res) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can delete registration periods' });
+    }
+
+    const { periodId } = req.params;
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      const result = await client.query(
+        'DELETE FROM registration_periods WHERE id = $1 RETURNING id',
+        [periodId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Registration period not found' });
+      }
+
+      res.json({ message: 'Registration period deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting registration period:', err);
+      res.status(500).json({ error: 'Server error deleting registration period' });
     } finally {
       if (client) client.release();
     }
