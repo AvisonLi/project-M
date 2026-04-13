@@ -606,7 +606,7 @@ For issues and questions:
 
 ## 🔄 Version History
 
-### v1.1.0 (Current)
+### v10.0001 (Current)
 - Added role-based access control (student, faculty, admin)
 - Implemented teacher course assignment system
 - Added admin user management endpoints
@@ -618,7 +618,7 @@ For issues and questions:
 - Improved notification system with auto-dismiss (10 seconds)
 - Updated API documentation with new endpoints
 
-### v1.0.0
+### v0.00001
 - Initial release
 - Full CRUD operations for courses
 - Concurrent registration handling with Redis locks
