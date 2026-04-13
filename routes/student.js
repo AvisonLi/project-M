@@ -8,22 +8,16 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Get student profile
 router.get('/profile', verifyToken, async (req, res) => {
   let client;
   try {
     client = await pool.connect();
-
     const profile = await client.query(
-      `SELECT id, student_id, name, email, phone, address, date_of_birth, major, year, gpa, credits_earned, profile_picture_url, is_active, last_login, created_at, updated_at
+      `SELECT id, student_id, name, email, phone, address, date_of_birth, major, year, gpa
        FROM students WHERE id = $1`,
       [req.userId]
     );
-
-    if (profile.rows.length === 0) {
-      return res.status(404).json({ error: 'Profile not found' });
-    }
-
+    if (profile.rows.length === 0) return res.status(404).json({ error: 'Profile not found' });
     res.json({ profile: profile.rows[0] });
   } catch (err) {
     console.error('Error fetching profile:', err);

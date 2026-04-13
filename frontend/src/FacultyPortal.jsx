@@ -612,18 +612,25 @@ function FacultyPortal({ token }) {
                     <h3>Attendance Sessions</h3>
                     {attendanceSessions.length > 0 ? (
                       <div className="sessions-list">
-                        {attendanceSessions.map(session => (
-                          <div key={session.id} className="session-item">
-                            <div className="session-info">
-                              <h4>{session.title}</h4>
-                              <p>{new Date(session.session_date).toLocaleDateString()} {session.start_time} - {session.end_time}</p>
-                              <p>Methods: {session.checkin_methods.join(', ')}</p>
+                        {attendanceSessions.map(session => {
+                          const allowedMethods = typeof session.checkin_methods === 'string' 
+                            ? JSON.parse(session.checkin_methods) 
+                            : session.checkin_methods;
+                          return (
+                            <div key={session.id} className="session-item">
+                              <div className="session-info">
+                                <h4>{session.title}</h4>
+                                <p>{new Date(session.session_date).toLocaleDateString()} {session.start_time} - {session.end_time}</p>
+                                <p>Methods: {allowedMethods.join(', ')}</p>
+                                {allowedMethods.includes('manual') && <p><strong>Manual Code:</strong> <code>{session.manual_code}</code></p>}
+                                {allowedMethods.includes('qr') && <p><strong>QR Code:</strong> <code>{session.qr_code}</code></p>}
+                              </div>
+                              <button onClick={() => handleViewAttendanceRecords(session.id)}>
+                                View Records
+                              </button>
                             </div>
-                            <button onClick={() => handleViewAttendanceRecords(session.id)}>
-                              View Records
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p>No attendance sessions created yet.</p>

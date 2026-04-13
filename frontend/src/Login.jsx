@@ -210,6 +210,10 @@ function Login() {
           <p className="demo-title">Demo Credentials:</p>
           <p>Email: student@example.com</p>
           <p>Password: student123</p>
+          <p>Email: faculty@example.com</p>
+          <p>Password: faculty123</p>
+          <p>Email: admin@example.com</p>
+          <p>Password: admin123</p>
         </div>
       </div>
     </div>

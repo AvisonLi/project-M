@@ -515,3 +515,227 @@
     flex-direction: column;
   }
 }
+/* Simple Grade Book Styles */
+.course-selector {
+  margin-bottom: 2rem;
+}
+.course-selector select {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+/* Final Grade Card */
+.final-grade-card {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  border-radius: 20px;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+.grade-letter {
+  font-size: 4rem;
+  font-weight: bold;
+  background: rgba(255,255,255,0.2);
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+.grade-details {
+  flex: 1;
+}
+.grade-details div {
+  margin: 0.5rem 0;
+}
+.grade-details span {
+  font-weight: normal;
+  opacity: 0.9;
+  margin-right: 0.5rem;
+}
+
+/* Tables */
+.scores-table, .stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.scores-table th, .stats-table th {
+  background: #f8f9fa;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #e9ecef;
+}
+.scores-table td, .stats-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.scores-table tr:hover, .stats-table tr:hover {
+  background: #fafbfc;
+}
+.score-value {
+  font-weight: bold;
+  color: #2c3e50;
+}
+.score-percent {
+  font-weight: 600;
+  color: #27ae60;
+}
+.feedback-text {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Mini bar */
+.mini-bar {
+  background: #e9ecef;
+  border-radius: 20px;
+  height: 8px;
+  width: 80px;
+  overflow: hidden;
+}
+.mini-bar div {
+  background: #4caf50;
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.3s ease;
+}
+
+.empty-message {
+  text-align: center;
+  color: #6c757d;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.assessment-type {
+  text-transform: capitalize;
+}
+.history-table {
+  overflow-x: auto;
+}
+
+/* Check-in Section Styles */
+.checkin-section {
+  background: #e3f2fd;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #1976d2;
+}
+
+.checkin-section h3 {
+  margin-top: 0;
+  color: #1976d2;
+}
+
+.checkin-section .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.checkin-section .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkin-section .form-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.checkin-section .form-group select,
+.checkin-section .form-group input {
+  padding: 0.75rem;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.checkin-section button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+  height: fit-content;
+}
+
+.checkin-section button:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.checkin-section button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .checkin-section .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .checkin-section .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Attendance Table */
+.attendance-table {
+  margin-top: 2rem;
+}
+
+.attendance-table h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.attendance-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.attendance-table th {
+  background: #f5f5f5;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+}
+
+.attendance-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.attendance-table tr:hover {
+  background: #fafafa;
+}

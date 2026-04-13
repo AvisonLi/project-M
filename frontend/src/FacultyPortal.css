@@ -410,6 +410,16 @@
   font-size: 0.9rem;
 }
 
+.session-info code {
+  background: #f0f0f0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #d32f2f;
+  font-size: 0.85rem;
+}
+
 .attendance-records-section {
   background: #f9f9f9;
   padding: 1.5rem;
