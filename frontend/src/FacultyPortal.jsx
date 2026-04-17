@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './FacultyPortal.css';
+import GradeUploadPanel from './components/GradeUploadPanel';
 
 function FacultyPortal({ token }) {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ function FacultyPortal({ token }) {
   const [courseAssessments, setCourseAssessments] = useState([]);
   const [courseGrades, setCourseGrades] = useState([]);
   const [gradeStatistics, setGradeStatistics] = useState({});
+  const [csvUploading, setCsvUploading] = useState(false);
+  const [showGradeEntry, setShowGradeEntry] = useState(true);
 
   // Attendance session form
   const [attendanceForm, setAttendanceForm] = useState({
@@ -326,6 +329,42 @@ function FacultyPortal({ token }) {
     }
   };
 
+  const handleUploadGradesCsv = async (assessmentId, file) => {
+    if (!assessmentId || !file) {
+      setError('請先選擇 assessment 與 CSV 檔案');
+      return;
+    }
+
+    setCsvUploading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const formData = new FormData();
+      formData.append('csv', file);
+
+      const res = await axios.post(
+        `/api/assessments/upload-grades/${assessmentId}`,
+        formData,
+        {
+          ...axiosConfig,
+          headers: {
+            ...axiosConfig.headers,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      setSuccess(res.data.message || 'CSV 成績上傳成功');
+      if (selectedCourse?.id) {
+        fetchCourseGrades(selectedCourse.id);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'CSV 成績上傳失敗');
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
   return (
     <div className="faculty-container">
       <div className="portal-header">
@@ -613,15 +652,23 @@ function FacultyPortal({ token }) {
                     {attendanceSessions.length > 0 ? (
                       <div className="sessions-list">
                         {attendanceSessions.map(session => {
-                          const allowedMethods = typeof session.checkin_methods === 'string' 
-                            ? JSON.parse(session.checkin_methods) 
-                            : session.checkin_methods;
+                          let allowedMethods = [];
+                          if (Array.isArray(session.checkin_methods)) {
+                            allowedMethods = session.checkin_methods;
+                          } else if (typeof session.checkin_methods === 'string') {
+                            try {
+                              const parsedMethods = JSON.parse(session.checkin_methods);
+                              allowedMethods = Array.isArray(parsedMethods) ? parsedMethods : [];
+                            } catch (e) {
+                              allowedMethods = [];
+                            }
+                          }
                           return (
                             <div key={session.id} className="session-item">
                               <div className="session-info">
                                 <h4>{session.title}</h4>
                                 <p>{new Date(session.session_date).toLocaleDateString()} {session.start_time} - {session.end_time}</p>
-                                <p>Methods: {allowedMethods.join(', ')}</p>
+                                <p>Methods: {allowedMethods.length > 0 ? allowedMethods.join(', ') : 'Not specified'}</p>
                                 {allowedMethods.includes('manual') && <p><strong>Manual Code:</strong> <code>{session.manual_code}</code></p>}
                                 {allowedMethods.includes('qr') && <p><strong>QR Code:</strong> <code>{session.qr_code}</code></p>}
                               </div>
@@ -770,76 +817,100 @@ function FacultyPortal({ token }) {
                     )}
                   </div>
 
+                  <GradeUploadPanel
+                    assessments={courseAssessments}
+                    onUpload={handleUploadGradesCsv}
+                    uploading={csvUploading}
+                  />
+
                   <div className="grade-entry-section">
-                    <h3>Grade Entry</h3>
-                    {courseGrades.length > 0 ? (
-                      <div className="grade-entry-table">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Student</th>
-                              {courseAssessments.map(assessment => (
-                                <th key={assessment.id}>{assessment.title}</th>
-                              ))}
-                              <th>Final Grade</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {courseGrades.map(student => (
-                              <tr key={student.student_id}>
-                                <td>{student.name} ({student.student_id})</td>
-                                {courseAssessments.map(assessment => {
-                                  const studentAssessment = student.assessments?.find(a => a.assessment_id === assessment.id);
-                                  return (
-                                    <td key={assessment.id}>
-                                      <input
-                                        type="number"
-                                        placeholder="Score"
-                                        value={studentAssessment?.score || ''}
-                                        onChange={(e) => {
-                                          const score = e.target.value;
-                                          if (score) {
-                                            handleRecordAssessmentScore(
-                                              student.student_id,
-                                              assessment.id,
-                                              score,
-                                              studentAssessment?.feedback || ''
-                                            );
-                                          }
-                                        }}
-                                        min="0"
-                                        max={assessment.max_score}
-                                        step="0.1"
-                                      />
-                                    </td>
-                                  );
-                                })}
-                                <td>{student.grade || 'Not graded'}</td>
+                    <div className="form-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0 }}>Grade Entry</h3>
+                      <button
+                        type="button"
+                        className="btn-warning"
+                        onClick={() => setShowGradeEntry((prev) => !prev)}
+                      >
+                        {showGradeEntry ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
+                    {showGradeEntry ? (
+                      courseGrades.length > 0 ? (
+                        <div className="grade-entry-table">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Student</th>
+                                {courseAssessments.map(assessment => (
+                                  <th key={assessment.id}>{assessment.title}</th>
+                                ))}
+                                <th>Final Grade</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p>No students enrolled or no assessments created.</p>
-                    )}
+                            </thead>
+                            <tbody>
+                              {courseGrades.map(student => (
+                                <tr key={student.student_id}>
+                                  <td>{student.name} ({student.student_id})</td>
+                                  {courseAssessments.map(assessment => {
+                                    const studentAssessment = student.assessments?.find(a => a.assessment_id === assessment.id);
+                                    return (
+                                      <td key={assessment.id}>
+                                        <input
+                                          type="number"
+                                          placeholder="Score"
+                                          value={studentAssessment?.score || ''}
+                                          onChange={(e) => {
+                                            const score = e.target.value;
+                                            if (score) {
+                                              handleRecordAssessmentScore(
+                                                student.student_id,
+                                                assessment.id,
+                                                score,
+                                                studentAssessment?.feedback || ''
+                                              );
+                                            }
+                                          }}
+                                          min="0"
+                                          max={assessment.max_score}
+                                          step="0.1"
+                                        />
+                                      </td>
+                                    );
+                                  })}
+                                  <td>{student.grade || 'Not graded'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p>No students enrolled or no assessments created.</p>
+                      )
+                    ) : null}
                   </div>
 
                   {gradeStatistics && Object.keys(gradeStatistics).length > 0 && (
                     <div className="grade-statistics-section">
                       <h3>Class Statistics</h3>
-                      {Object.entries(gradeStatistics).map(([assessmentId, stats]) => (
-                        <div key={assessmentId} className="assessment-stats">
-                          <h4>{stats.title}</h4>
-                          <div className="stats-grid">
-                            <div>Count: {stats.statistics.count}</div>
-                            <div>Mean: {stats.statistics.mean.toFixed(2)}</div>
-                            <div>Median: {stats.statistics.median.toFixed(2)}</div>
-                            <div>Min: {stats.statistics.min.toFixed(2)}</div>
-                            <div>Max: {stats.statistics.max.toFixed(2)}</div>
+                      {Object.entries(gradeStatistics).map(([assessmentId, stats]) => {
+                        const statData = stats?.statistics || {};
+                        const mean = Number(statData.mean);
+                        const median = Number(statData.median);
+                        const min = Number(statData.min);
+                        const max = Number(statData.max);
+                        return (
+                          <div key={assessmentId} className="assessment-stats">
+                            <h4>{stats.title}</h4>
+                            <div className="stats-grid">
+                              <div>Count: {statData.count ?? 0}</div>
+                              <div>Mean: {Number.isFinite(mean) ? mean.toFixed(2) : 'N/A'}</div>
+                              <div>Median: {Number.isFinite(median) ? median.toFixed(2) : 'N/A'}</div>
+                              <div>Min: {Number.isFinite(min) ? min.toFixed(2) : 'N/A'}</div>
+                              <div>Max: {Number.isFinite(max) ? max.toFixed(2) : 'N/A'}</div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
