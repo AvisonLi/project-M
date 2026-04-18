@@ -20,6 +20,7 @@ function AdminPortal({ token }) {
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [users, setUsers] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -47,6 +48,12 @@ function AdminPortal({ token }) {
   const [selectedCourse, setSelectedCourse] = useState('');
   const [studentEnrollments, setStudentEnrollments] = useState([]);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+
+  // Instructor assignment management
+  const [selectedTeacherForAssignment, setSelectedTeacherForAssignment] = useState('');
+  const [selectedCourseForAssignment, setSelectedCourseForAssignment] = useState('');
+  const [teacherAssignments, setTeacherAssignments] = useState([]);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
 
   // Registration Period Form (new)
   const [periodForm, setPeriodForm] = useState({
@@ -108,6 +115,17 @@ function AdminPortal({ token }) {
           setSelectedStudent('');
           setSelectedCourse('');
           setStudentEnrollments([]);
+        } else if (activeTab === 'instructorAssignments') {
+          const [coursesRes, usersRes] = await Promise.all([
+            axios.get('/api/admin/courses', axiosConfig),
+            axios.get('/api/admin/users', axiosConfig),
+          ]);
+          setCourses(coursesRes.data.courses || []);
+          const facultyUsers = (usersRes.data.users || []).filter((user) => user.role === 'faculty');
+          setTeachers(facultyUsers);
+          setSelectedTeacherForAssignment('');
+          setSelectedCourseForAssignment('');
+          setTeacherAssignments([]);
         } else if (activeTab === 'registration') {
           const res = await axios.get('/api/admin/registration-periods', axiosConfig);
           setRegistrationPeriods(res.data.periods);
@@ -145,6 +163,30 @@ function AdminPortal({ token }) {
     };
     fetchStudentEnrollments();
   }, [selectedStudent]);
+
+  useEffect(() => {
+    const fetchTeacherAssignments = async () => {
+      if (activeTab !== 'instructorAssignments' || !selectedTeacherForAssignment) {
+        setTeacherAssignments([]);
+        return;
+      }
+
+      setAssignmentLoading(true);
+      try {
+        const res = await axios.get(
+          `/api/admin/teacher-courses/${selectedTeacherForAssignment}`,
+          axiosConfig
+        );
+        setTeacherAssignments(res.data.courses || []);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to load teacher assignments');
+      } finally {
+        setAssignmentLoading(false);
+      }
+    };
+
+    fetchTeacherAssignments();
+  }, [activeTab, selectedTeacherForAssignment]);
 
   // -------------------- Course Management --------------------
   const handleCourseFormChange = (e) => {
@@ -361,6 +403,66 @@ function AdminPortal({ token }) {
     }
   };
 
+  // -------------------- Instructor Assignment Management --------------------
+  const handleAssignCourseToTeacher = async () => {
+    if (!selectedTeacherForAssignment || !selectedCourseForAssignment) {
+      setError('Please select both an instructor and a course');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await axios.post(
+        '/api/admin/teacher-courses',
+        {
+          teacherId: selectedTeacherForAssignment,
+          courseId: selectedCourseForAssignment,
+        },
+        axiosConfig
+      );
+
+      setSuccess('Instructor assignment created successfully!');
+      setSelectedCourseForAssignment('');
+
+      const res = await axios.get(
+        `/api/admin/teacher-courses/${selectedTeacherForAssignment}`,
+        axiosConfig
+      );
+      setTeacherAssignments(res.data.courses || []);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to assign course to instructor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveTeacherAssignment = async (courseId) => {
+    if (!selectedTeacherForAssignment) {
+      setError('Please select an instructor first');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to remove this instructor assignment?')) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await axios.delete(
+        `/api/admin/teacher-courses/${selectedTeacherForAssignment}/${courseId}`,
+        axiosConfig
+      );
+      setSuccess('Instructor assignment removed successfully!');
+      setTeacherAssignments((prev) => prev.filter((assignment) => assignment.id !== courseId));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to remove instructor assignment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // -------------------- Registration Period Management (new) --------------------
   const handlePeriodFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -485,6 +587,7 @@ function AdminPortal({ token }) {
         <button className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>👤 User Management</button>
         {/* New tabs */}
         <button className={`tab-btn ${activeTab === 'enrollments' ? 'active' : ''}`} onClick={() => setActiveTab('enrollments')}>📝 Enrollments</button>
+        <button className={`tab-btn ${activeTab === 'instructorAssignments' ? 'active' : ''}`} onClick={() => setActiveTab('instructorAssignments')}>🧑‍🏫 Instructor Assignments</button>
         <button className={`tab-btn ${activeTab === 'registration' ? 'active' : ''}`} onClick={() => setActiveTab('registration')}>🗓️ Registration Periods</button>
         <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>📈 Reports</button>
       </div>
@@ -614,6 +717,97 @@ function AdminPortal({ token }) {
                           </tbody>
                         </table>
                       ) : <p className="no-data">This student is not enrolled in any courses.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* INSTRUCTOR ASSIGNMENTS TAB */}
+            {activeTab === 'instructorAssignments' && (
+              <div className="enrollments-management">
+                <h2>Manage Instructor Course Assignments</h2>
+                <div className="enrollment-form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Select Instructor</label>
+                      <select
+                        value={selectedTeacherForAssignment}
+                        onChange={(e) => setSelectedTeacherForAssignment(e.target.value)}
+                      >
+                        <option value="">-- Choose an instructor --</option>
+                        {teachers.map((teacher) => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.name} ({teacher.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Select Course</label>
+                      <select
+                        value={selectedCourseForAssignment}
+                        onChange={(e) => setSelectedCourseForAssignment(e.target.value)}
+                      >
+                        <option value="">-- Choose a course --</option>
+                        {courses.map((course) => (
+                          <option key={course.id} value={course.id}>
+                            {course.code} - {course.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ alignSelf: 'flex-end' }}>
+                      <button
+                        onClick={handleAssignCourseToTeacher}
+                        disabled={loading || !selectedTeacherForAssignment || !selectedCourseForAssignment}
+                        className="btn-submit"
+                      >
+                        Assign Course
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTeacherForAssignment && (
+                  <div className="student-enrollments">
+                    <h3>Current Instructor Assignments</h3>
+                    {assignmentLoading ? (
+                      <div className="loading">Loading assignments...</div>
+                    ) : teacherAssignments.length > 0 ? (
+                      <table className="enrollments-table">
+                        <thead>
+                          <tr>
+                            <th>Course Code</th>
+                            <th>Course Title</th>
+                            <th>Capacity</th>
+                            <th>Current Enrolled</th>
+                            <th>Assigned At</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teacherAssignments.map((assignment) => (
+                            <tr key={assignment.id}>
+                              <td>{assignment.code}</td>
+                              <td>{assignment.title}</td>
+                              <td>{assignment.capacity}</td>
+                              <td>{assignment.current_enrollments}</td>
+                              <td>{new Date(assignment.assigned_at).toLocaleDateString()}</td>
+                              <td>
+                                <button
+                                  className="btn-delete"
+                                  onClick={() => handleRemoveTeacherAssignment(assignment.id)}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="no-data">This instructor has no assigned courses.</p>
                     )}
                   </div>
                 )}

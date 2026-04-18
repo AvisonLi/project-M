@@ -1,0 +1,30 @@
+.grade-upload-section {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.grade-upload-section h3 {
+  margin: 0 0 8px;
+}
+
+.upload-hint {
+  margin: 0 0 12px;
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
+.grade-upload-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.grade-upload-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

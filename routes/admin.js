@@ -29,10 +29,18 @@ module.exports = (pool) => {
     }
   };
 
+  const requireAdmin = (req, res, next) => {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    next();
+  };
+
   // ========== COURSE MANAGEMENT ==========
 
   // Create a new course
-  router.post('/courses', verifyToken, async (req, res) => {
+  router.post('/courses', verifyToken, requireAdmin, async (req, res) => {
     const { code, title, capacity } = req.body;
 
     if (!code || !title || capacity === undefined) {
@@ -71,7 +79,7 @@ module.exports = (pool) => {
   });
 
   // Get all courses
-  router.get('/courses', async (req, res) => {
+  router.get('/courses', verifyToken, requireAdmin, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
@@ -103,12 +111,24 @@ module.exports = (pool) => {
   });
 
   // Get course details with enrollment list
-  router.get('/courses/:courseId', async (req, res) => {
+  router.get('/courses/:courseId', verifyToken, async (req, res) => {
     const { courseId } = req.params;
 
     let client;
     try {
       client = await pool.connect();
+
+      if (req.userRole === 'faculty') {
+        const assignmentCheck = await client.query(
+          'SELECT id FROM teacher_courses WHERE teacher_id = $1 AND course_id = $2',
+          [req.userId, courseId]
+        );
+        if (assignmentCheck.rows.length === 0) {
+          return res.status(403).json({ error: 'You are not assigned to this course' });
+        }
+      } else if (req.userRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
 
       const courseResult = await client.query(
         `SELECT c.id, c.code, c.title, c.capacity,
@@ -149,7 +169,7 @@ module.exports = (pool) => {
   });
 
   // Update course
-  router.put('/courses/:courseId', verifyToken, async (req, res) => {
+  router.put('/courses/:courseId', verifyToken, requireAdmin, async (req, res) => {
     const { courseId } = req.params;
     const { code, title, capacity } = req.body;
 
@@ -223,7 +243,7 @@ module.exports = (pool) => {
   });
 
   // Delete course
-  router.delete('/courses/:courseId', verifyToken, async (req, res) => {
+  router.delete('/courses/:courseId', verifyToken, requireAdmin, async (req, res) => {
     const { courseId } = req.params;
 
     let client;
@@ -260,7 +280,7 @@ module.exports = (pool) => {
   // ========== STUDENT MANAGEMENT ==========
 
   // Get all students
-  router.get('/students', async (req, res) => {
+  router.get('/students', verifyToken, requireAdmin, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
@@ -271,6 +291,7 @@ module.exports = (pool) => {
                 (SELECT COUNT(*) FROM grades WHERE student_id = s.id) as grades_count,
                 s.created_at, s.updated_at
          FROM students s
+         WHERE s.role = 'student'
          ORDER BY s.name ASC`
       );
 
@@ -293,7 +314,7 @@ module.exports = (pool) => {
   });
 
   // Get student details with enrollments and grades
-  router.get('/students/:studentId/details', async (req, res) => {
+  router.get('/students/:studentId/details', verifyToken, requireAdmin, async (req, res) => {
     const { studentId } = req.params;
 
     let client;
@@ -355,7 +376,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Enroll student in course
-  router.post('/students/:studentId/enroll/:courseId', verifyToken, async (req, res) => {
+  router.post('/students/:studentId/enroll/:courseId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can enroll students' });
     }
@@ -412,7 +433,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Unenroll student from course
-  router.delete('/students/:studentId/enroll/:courseId', verifyToken, async (req, res) => {
+  router.delete('/students/:studentId/enroll/:courseId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can unenroll students' });
     }
@@ -450,7 +471,7 @@ const enrollmentsResult = await client.query(
   // ========== SYSTEM STATISTICS ==========
 
   // Get system dashboard statistics
-  router.get('/statistics/dashboard', async (req, res) => {
+  router.get('/statistics/dashboard', verifyToken, requireAdmin, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
@@ -506,7 +527,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Get students by course
-  router.get('/reports/course-enrollment', async (req, res) => {
+  router.get('/reports/course-enrollment', verifyToken, requireAdmin, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
@@ -544,7 +565,7 @@ const enrollmentsResult = await client.query(
   // ========== USER MANAGEMENT ==========
 
   // Get all users (with roles)
-  router.get('/users', verifyToken, async (req, res) => {
+  router.get('/users', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can view all users' });
     }
@@ -567,7 +588,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Get user by ID
-  router.get('/users/:userId', verifyToken, async (req, res) => {
+  router.get('/users/:userId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can view user details' });
     }
@@ -595,7 +616,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Update user profile
-  router.put('/users/:userId', verifyToken, async (req, res) => {
+  router.put('/users/:userId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can update users' });
     }
@@ -681,7 +702,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Create new user
-  router.post('/users', verifyToken, async (req, res) => {
+  router.post('/users', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can create users' });
     }
@@ -732,7 +753,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Delete user
-  router.delete('/users/:userId', verifyToken, async (req, res) => {
+  router.delete('/users/:userId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can delete users' });
     }
@@ -765,7 +786,7 @@ const enrollmentsResult = await client.query(
   // ========== TEACHER COURSE ASSIGNMENT ==========
 
   // Assign course to teacher
-  router.post('/teacher-courses', verifyToken, async (req, res) => {
+  router.post('/teacher-courses', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can assign courses to teachers' });
     }
@@ -819,12 +840,20 @@ const enrollmentsResult = await client.query(
   });
 
   // Get teacher's assigned courses
-  router.get('/teacher-courses/:teacherId', async (req, res) => {
+  router.get('/teacher-courses/:teacherId', verifyToken, async (req, res) => {
     const { teacherId } = req.params;
 
     let client;
     try {
       client = await pool.connect();
+
+      const normalizedTeacherId = parseInt(teacherId, 10);
+      if (
+        req.userRole !== 'admin' &&
+        !(req.userRole === 'faculty' && Number(req.userId) === normalizedTeacherId)
+      ) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
 
       const result = await client.query(
         `SELECT c.id, c.code, c.title, c.capacity,
@@ -853,7 +882,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Remove course from teacher
-  router.delete('/teacher-courses/:teacherId/:courseId', verifyToken, async (req, res) => {
+  router.delete('/teacher-courses/:teacherId/:courseId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can remove course assignments' });
     }
@@ -885,7 +914,7 @@ const enrollmentsResult = await client.query(
   // ========== REGISTRATION PERIOD MANAGEMENT ==========
 
   // Get registration periods
-  router.get('/registration-periods', verifyToken, async (req, res) => {
+  router.get('/registration-periods', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can view registration periods' });
     }
@@ -909,7 +938,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Create registration period
-  router.post('/registration-periods', verifyToken, async (req, res) => {
+  router.post('/registration-periods', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can create registration periods' });
     }
@@ -946,7 +975,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Update registration period
-  router.put('/registration-periods/:periodId', verifyToken, async (req, res) => {
+  router.put('/registration-periods/:periodId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can update registration periods' });
     }
@@ -1015,7 +1044,7 @@ const enrollmentsResult = await client.query(
   });
 
   // Delete registration period
-  router.delete('/registration-periods/:periodId', verifyToken, async (req, res) => {
+  router.delete('/registration-periods/:periodId', verifyToken, requireAdmin, async (req, res) => {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Only admins can delete registration periods' });
     }

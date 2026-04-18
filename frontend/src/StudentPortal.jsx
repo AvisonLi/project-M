@@ -58,6 +58,9 @@ function StudentPortal({ user, token }) {
   // Attendance check-in state
   const [checkinCode, setCheckinCode] = useState('');
   const [checkinCourseId, setCheckinCourseId] = useState('');
+  const [checkinSessionId, setCheckinSessionId] = useState('');
+  const [checkinMethod, setCheckinMethod] = useState('manual');
+  const [courseSessions, setCourseSessions] = useState([]);
 
   const axiosConfig = {
     headers: { Authorization: `Bearer ${storedToken}` }
@@ -153,6 +156,21 @@ function StudentPortal({ user, token }) {
     } catch (err) {
       console.error('Error fetching attendance:', err);
       setAttendance([]);
+    }
+  };
+
+  const fetchCourseSessions = async (courseId) => {
+    if (!courseId) {
+      setCourseSessions([]);
+      return;
+    }
+
+    try {
+      const res = await axios.get(`/api/attendance/sessions/${courseId}`, axiosConfig);
+      setCourseSessions(res.data.sessions || []);
+    } catch (err) {
+      console.error('Error fetching attendance sessions:', err);
+      setCourseSessions([]);
     }
   };
 
@@ -304,19 +322,35 @@ function StudentPortal({ user, token }) {
   };
 
   const handleCheckin = async () => {
-    if (!checkinCode || !checkinCourseId) {
-      setError('Please select a course and enter a check-in code');
+    if (!checkinCourseId || !checkinSessionId || !checkinMethod) {
+      setError('Please select a course, session, and check-in method');
       return;
     }
+
+    const selectedSession = courseSessions.find((session) => session.id === checkinSessionId);
+    if (!selectedSession) {
+      setError('Selected attendance session is invalid');
+      return;
+    }
+
+    if ((checkinMethod === 'manual' || checkinMethod === 'qr') && !checkinCode.trim()) {
+      setError('Please enter the check-in code');
+      return;
+    }
+
     setLoading(true);
     try {
       await axios.post('/api/attendance/checkin', {
-        code: checkinCode,
-        courseId: checkinCourseId
+        sessionId: checkinSessionId,
+        method: checkinMethod,
+        code: checkinMethod === 'manual' || checkinMethod === 'qr' ? checkinCode.trim() : undefined,
       }, axiosConfig);
       setSuccess('Check-in successful!');
       setCheckinCode('');
       setCheckinCourseId('');
+      setCheckinSessionId('');
+      setCheckinMethod('manual');
+      setCourseSessions([]);
       if (selectedCourseForDetails) {
         fetchAttendance(selectedCourseForDetails);
       }
@@ -326,6 +360,13 @@ function StudentPortal({ user, token }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setCheckinSessionId('');
+    setCheckinMethod('manual');
+    setCheckinCode('');
+    fetchCourseSessions(checkinCourseId);
+  }, [checkinCourseId]);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -496,7 +537,7 @@ function StudentPortal({ user, token }) {
               <div key={course.id} className="course-card available">
                 <h4>{course.code}</h4><p>{course.title}</p><p className="course-capacity">{course.current_enrollments}/{course.capacity} enrolled</p><p className="course-credits">{course.credits} credits</p>
                 {course.is_enrolled ? <span className="enrolled-badge">Already Enrolled</span> : course.waitlist_position ? <span className="waitlist-badge">Waitlist Position: {course.waitlist_position}</span> : (
-                  <button onClick={() => handleCourseRegistration(course.id)} disabled={loading || course.current_enrollments >= course.capacity}>
+                  <button onClick={() => handleCourseRegistration(course.id)} disabled={loading}>
                     {course.current_enrollments >= course.capacity ? 'Join Waitlist' : 'Register'}
                   </button>
                 )}
@@ -605,7 +646,7 @@ function StudentPortal({ user, token }) {
             <label>Select Course</label>
             <select
               value={checkinCourseId}
-              onChange={(e) => setCheckinCourseId(Number(e.target.value))}
+              onChange={(e) => setCheckinCourseId(e.target.value ? Number(e.target.value) : '')}
             >
               <option value="">-- Choose course --</option>
               {enrolledCourses.map(course => (
@@ -616,12 +657,39 @@ function StudentPortal({ user, token }) {
             </select>
           </div>
           <div className="form-group">
-            <label>Check-in Code</label>
+            <label>Select Session</label>
+            <select
+              value={checkinSessionId}
+              onChange={(e) => setCheckinSessionId(e.target.value ? Number(e.target.value) : '')}
+              disabled={!checkinCourseId}
+            >
+              <option value="">-- Choose session --</option>
+              {courseSessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.title} ({new Date(session.session_date).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Check-in Method</label>
+            <select
+              value={checkinMethod}
+              onChange={(e) => setCheckinMethod(e.target.value)}
+              disabled={!checkinSessionId}
+            >
+              <option value="manual">Manual Code</option>
+              <option value="qr">QR Code</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>{checkinMethod === 'qr' ? 'QR Code' : 'Check-in Code'}</label>
             <input
               type="text"
               value={checkinCode}
               onChange={(e) => setCheckinCode(e.target.value)}
-              placeholder="Enter code from instructor"
+              placeholder={checkinMethod === 'qr' ? 'Paste QR code value' : 'Enter code from instructor'}
+              disabled={!checkinSessionId}
             />
           </div>
           <button onClick={handleCheckin} disabled={loading}>

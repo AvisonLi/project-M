@@ -309,24 +309,32 @@
 
 .course-tabs button {
   padding: 0.75rem 1.5rem;
-  border: none;
-  background: #f9f9f9;
-  color: #666;
+  border: 1px solid #d8dce5;
+  background: #f3f4f6;
+  color: #4b5563;
   cursor: pointer;
   border-radius: 6px 6px 0 0;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
-.tab-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom: 2px solid #667eea;
+.course-tabs button.tab-active {
+  background: #2f3f73;
+  color: #ffffff;
+  border-color: #2f3f73;
+  border-bottom: 3px solid #5b7bff;
+  box-shadow: 0 3px 10px rgba(47, 63, 115, 0.25);
+  transform: translateY(1px);
 }
 
-.tab-inactive:hover {
-  background: #e9ecef;
-  color: #333;
+.course-tabs button.tab-inactive {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.course-tabs button.tab-inactive:hover {
+  background: #e8ebf1;
+  color: #1f2937;
 }
 
 /* Attendance Section */

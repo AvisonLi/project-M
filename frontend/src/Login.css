@@ -44,7 +44,24 @@
   box-sizing: border-box;
 }
 
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+  background: white;
+}
+
 .form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group select:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -97,6 +114,67 @@
   text-align: center;
   margin-top: 1.5rem;
   color: #666;
+  font-size: 0.9rem;
+}
+
+.sso-section {
+  margin-top: 1.25rem;
+}
+
+.sso-divider {
+  position: relative;
+  text-align: center;
+  margin: 0.75rem 0 1rem;
+}
+
+.sso-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid #ddd;
+  transform: translateY(-50%);
+}
+
+.sso-divider span {
+  position: relative;
+  background: white;
+  padding: 0 0.6rem;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.sso-title {
+  margin: 0 0 0.75rem;
+  color: #333;
+  font-size: 1rem;
+}
+
+.sso-btn {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #667eea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4a5bc8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sso-btn:hover:not(:disabled) {
+  background: #eef1ff;
+}
+
+.sso-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.sso-empty {
+  margin: 0;
+  color: #777;
   font-size: 0.9rem;
 }
 

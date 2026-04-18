@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
@@ -13,8 +13,61 @@ function Login() {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState([]);
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const SSO_BASE = '/api/sso/sso';
+
+  const handleAuthSuccess = (payload) => {
+    const token = payload?.token;
+    const userPayload = payload?.student || payload?.user;
+    if (!token || !userPayload) {
+      throw new Error('Invalid authentication response');
+    }
+
+    const user = {
+      ...userPayload,
+      role: userPayload?.role || 'student',
+    };
+
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('user', JSON.stringify(user));
+
+    setSuccess(payload?.message || 'Success!');
+
+    if (user.role === 'student') {
+      navigate('/student');
+    } else if (user.role === 'faculty') {
+      navigate('/faculty');
+    } else if (user.role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/student');
+    }
+  };
+
+  const fetchSsoProviders = async () => {
+    try {
+      const res = await axios.get(`${SSO_BASE}/providers`);
+      const providers = res.data?.providers || [];
+      setSsoProviders(providers);
+      if (providers.length > 0 && !selectedProvider) {
+        setSelectedProvider(providers[0].name);
+      }
+    } catch (err) {
+      setSsoProviders([]);
+      setSelectedProvider('');
+    }
+  };
+
+  useEffect(() => {
+    if (isLogin) {
+      fetchSsoProviders();
+    }
+  }, [isLogin]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -73,28 +126,7 @@ function Login() {
         });
       }
 
-      const { token, student } = response.data;
-      const user = {
-        ...student,
-        role: student?.role || 'student',
-      };
-
-      // Store token and user
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(user));
-
-      setSuccess(response.data.message || 'Success!');
-
-      // Role-based redirect
-      if (user.role === 'student') {
-        navigate('/student');
-      } else if (user.role === 'faculty') {
-        navigate('/faculty');
-      } else if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/student');
-      }
+      handleAuthSuccess(response.data);
 
       // Reset form
       setFormData({
@@ -114,6 +146,49 @@ function Login() {
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSsoLogin = async () => {
+    if (!selectedProvider) {
+      setError('Please select an SSO provider');
+      return;
+    }
+
+    setSsoLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const loginRes = await axios.post(`${SSO_BASE}/login`, {
+        provider: selectedProvider,
+        returnUrl: `${window.location.origin}/`,
+      });
+
+      const ssoUrl = loginRes.data?.ssoUrl;
+      const state = loginRes.data?.state;
+
+      if (ssoUrl) {
+        // Existing real SSO redirect flow
+        window.location.href = ssoUrl;
+        return;
+      }
+
+      // Mock fallback flow using existing callback endpoint
+      const callbackRes = await axios.post(`${SSO_BASE}/callback`, {
+        provider: selectedProvider,
+        code: 'mock-code',
+        state: state || 'mock-state',
+      });
+      handleAuthSuccess(callbackRes.data);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.error ||
+        err.message ||
+        'SSO login failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setSsoLoading(false);
     }
   };
 
@@ -198,6 +273,41 @@ function Login() {
             {loading ? 'Loading...' : isLogin ? 'Login' : 'Register'}
           </button>
         </form>
+
+        {isLogin && (
+          <div className="sso-section">
+            <div className="sso-divider"><span>or</span></div>
+            <h3 className="sso-title">Single Sign-On</h3>
+            {ssoProviders.length > 0 ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="ssoProvider">SSO Provider</label>
+                  <select
+                    id="ssoProvider"
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value)}
+                  >
+                    {ssoProviders.map((provider) => (
+                      <option key={provider.id || provider.name} value={provider.name}>
+                        {provider.name} ({provider.provider_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="sso-btn"
+                  onClick={handleSsoLogin}
+                  disabled={ssoLoading}
+                >
+                  {ssoLoading ? 'Connecting to SSO...' : 'Login with SSO'}
+                </button>
+              </>
+            ) : (
+              <p className="sso-empty">No active SSO providers found.</p>
+            )}
+          </div>
+        )}
 
         <div className="toggle-mode">
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
