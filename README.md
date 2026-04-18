@@ -598,3 +598,25 @@ For issues and questions:
 
 **Last Updated**: 2026-05-12
 **Project Status**: Active Development
+
+## ⚠️ Known Environment Constraints (Added Note)
+
+This section is added as a clarification note without changing existing setup instructions.
+
+### Redis memory limit in the current environment
+
+- The current Redis environment may have a small memory cap (around **30 MB** in some deployments).
+- Under higher load or larger datasets, Redis eviction and lock/cache behavior can differ from a larger production Redis instance.
+- Performance and concurrency test results should be interpreted with this limit in mind.
+
+### Seed dataset scale
+
+- The current `seed_data.py` is designed for **demo/testing coverage**, not large-scale benchmarking.
+- It does **not** generate a 5000-record-level dataset by default.
+- If 5k+ scale validation is required, use an additional data generation script or extend the existing seed process.
+
+### Testing recommendation
+
+1. Validate functional flows with the default seed data first.
+2. Run separate large-scale tests with expanded synthetic data.
+3. Record Redis memory constraints alongside performance results in reports.
