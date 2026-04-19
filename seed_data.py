@@ -83,6 +83,7 @@ CREATE TABLE enrollments (
     course_id INT REFERENCES courses(id) ON DELETE CASCADE,
     status VARCHAR(20) DEFAULT 'enrolled',
     enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    dropped_at TIMESTAMP,
     UNIQUE(student_id, course_id)
 );
 
