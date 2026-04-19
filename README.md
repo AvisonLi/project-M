@@ -72,7 +72,7 @@ DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/sms_db
 PORT=3001
 NODE_ENV=development
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://localhost:6379 <-also change to your redis>
 CORS_ORIGIN=http://localhost:3000
 LOG_LEVEL=debug
 ```
