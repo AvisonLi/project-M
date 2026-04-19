@@ -222,11 +222,6 @@ npm start
 - If the backend fails, check `DATABASE_URL`, `PORT`, and Redis connectivity.
 - The seed script is optional but recommended for quick testing.
 
----
-
-If you want, I can also add a short section with the most important test user logins and how to switch between student/faculty/admin views.| GET | `/statistics/dashboard` | Dashboard statistics | No |
-| GET | `/reports/course-enrollment` | Enrollment report | No |
-
 ## 🌱 Database Seeding
 
 The project includes an automated Python seeding script to populate the database with realistic test data:
@@ -615,8 +610,28 @@ This section is added as a clarification note without changing existing setup in
 - It does **not** generate a 5000-record-level dataset by default.
 - If 5k+ scale validation is required, use an additional data generation script or extend the existing seed process.
 
-### Testing recommendation
+### Testing recommendation  
 
 1. Validate functional flows with the default seed data first.
 2. Run separate large-scale tests with expanded synthetic data.
 3. Record Redis memory constraints alongside performance results in reports.
+PS C:\Users\aviso\Documents\GitHub\project-M> node test-concurrency.js
+redis testing :
+🚀 Starting Concurrency Test: Sending 10 simultaneous requests...
+Request 1: 🔒 Blocked by Redis Lock (429)
+Request 2: ❌ Failed with Status 400
+Error Data: { error: 'You are already enrolled for this course' }
+Request 3: 🔒 Blocked by Redis Lock (429)
+Request 4: 🔒 Blocked by Redis Lock (429)
+Request 5: 🔒 Blocked by Redis Lock (429)
+Request 6: 🔒 Blocked by Redis Lock (429)
+Request 7: 🔒 Blocked by Redis Lock (429)
+Request 8: 🔒 Blocked by Redis Lock (429)
+Request 9: 🔒 Blocked by Redis Lock (429)
+Request 10: 🔒 Blocked by Redis Lock (429)
+
+--- TEST SUMMARY ---
+Total Requests: 10
+Successful Enrollments: 0
+Redis Protections (429): 9
+Other Failures: 1
